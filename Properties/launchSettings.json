@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WinDialog (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "WinDialog (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

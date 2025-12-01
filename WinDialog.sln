@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33103.201
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinDialog", "WinDialog.csproj", "{F35866BE-721D-4020-85DF-B43931940C30}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup Project", "..\Setup Project\Setup Project.vdproj", "{92E3CE48-41E9-4A64-B71D-8884E24F2FE8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|ARM64.Build.0 = Debug|ARM64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|x64.ActiveCfg = Debug|x64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|x64.Build.0 = Debug|x64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|x64.Deploy.0 = Debug|x64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|x86.ActiveCfg = Debug|x86
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|x86.Build.0 = Debug|x86
+		{F35866BE-721D-4020-85DF-B43931940C30}.Debug|x86.Deploy.0 = Debug|x86
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|ARM64.ActiveCfg = Release|ARM64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|ARM64.Build.0 = Release|ARM64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|ARM64.Deploy.0 = Release|ARM64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|x64.ActiveCfg = Release|x64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|x64.Build.0 = Release|x64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|x64.Deploy.0 = Release|x64
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|x86.ActiveCfg = Release|x86
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|x86.Build.0 = Release|x86
+		{F35866BE-721D-4020-85DF-B43931940C30}.Release|x86.Deploy.0 = Release|x86
+		{92E3CE48-41E9-4A64-B71D-8884E24F2FE8}.Debug|ARM64.ActiveCfg = Debug
+		{92E3CE48-41E9-4A64-B71D-8884E24F2FE8}.Debug|x64.ActiveCfg = Debug
+		{92E3CE48-41E9-4A64-B71D-8884E24F2FE8}.Debug|x86.ActiveCfg = Debug
+		{92E3CE48-41E9-4A64-B71D-8884E24F2FE8}.Release|ARM64.ActiveCfg = Release
+		{92E3CE48-41E9-4A64-B71D-8884E24F2FE8}.Release|x64.ActiveCfg = Release
+		{92E3CE48-41E9-4A64-B71D-8884E24F2FE8}.Release|x86.ActiveCfg = Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7C90FE52-C64A-443E-A352-1BDAC3656F8A}
+	EndGlobalSection
+EndGlobal
