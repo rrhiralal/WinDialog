@@ -5,7 +5,7 @@
 ## Features
 
 - **Native WinUI 3 Design**: Modern, clean aesthetics that match Windows 11/10.
-- **Rich Text Support**: Full Markdown support for messages, including **bold**, *italics*, lists, headers, and [hyperlinks](https://github.com).
+- **Rich Text Support**: Full Markdown support for messages, including **bold**, *italics*, lists, headers, and hyperlinks.
 - **Customizable Layout**: Control window size, position, and title bar visibility.
 - **Interactive Elements**: Custom buttons, help messages with popovers, and icons (URL, file, or Base64).
 - **Automation Friendly**: Returns exit codes based on user interaction (0 for OK, 2 for Cancel).
