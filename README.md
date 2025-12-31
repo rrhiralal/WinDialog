@@ -14,7 +14,7 @@
 ## Installation
 
 ### Download
-Download the latest release from the [Releases](https://github.com/your-repo/releases) page (if applicable).
+Download the latest release from the [Releases](https://github.com/rrhiralal/WinDialog/releases/tag/Release) page (if applicable).
 
 ### Build from Source
 To build WinDialog from source, you need the .NET 9 SDK.
