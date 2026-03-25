@@ -13,6 +13,9 @@ namespace WinDialog
         static extern bool AttachConsole(int dwProcessId);
         private const int ATTACH_PARENT_PROCESS = -1;
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern uint GetDpiForWindow(IntPtr hwnd);
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
@@ -49,11 +52,14 @@ namespace WinDialog
                 Console.WriteLine("  --message <text>  Set the message text");
                 Console.WriteLine("  --button1 <text>  Set the primary button text (default: OK)");
                 Console.WriteLine("  --button2 <text>  Set the secondary button text (optional)");
-                Console.WriteLine("  --width <int>     Set the window width (default: 800)");
-                Console.WriteLine("  --height <int>    Set the window height (default: 600)");
+                Console.WriteLine("  --width <int>     Set the window width in logical pixels (default: 600)");
+                Console.WriteLine("  --height <int>    Set the window height in logical pixels (default: 400)");
+                Console.WriteLine("  --size <preset>   Set window size relative to display (small, medium, large, fullscreen)");
+                Console.WriteLine("                    Overrides --width/--height when set");
                 Console.WriteLine("  --hide-titlebar   Hide the window title bar");
                 Console.WriteLine("  --position <pos>  Set window position (Center, TopLeft, TopRight, BottomLeft, BottomRight)");
-                Console.WriteLine("  --icon <path>     Set icon (URL, file path, or Base64 string)");
+                Console.WriteLine("  --icon <path>     Set icon (URL, file path, Base64 string, or data URI)");
+                Console.WriteLine("  --iconsize <size> Set icon size: small, medium, large, WxH, W (width), or xH (height)");
                 Console.WriteLine("  --timer <seconds> Set a countdown timer to auto-click the default button");
                 Console.WriteLine("  --timer-text <txt> Customize the text before the timer (default: 'Closing in')");
                 Console.WriteLine("  --helpmessage <txt> Set a help message to be displayed when the help button is clicked");
@@ -69,7 +75,47 @@ namespace WinDialog
                 var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
                 var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
                 var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
-                appWindow.Resize(new Windows.Graphics.SizeInt32(options.Width, options.Height));
+
+                // Get DPI scale factor for this window
+                uint dpi = GetDpiForWindow(hWnd);
+                double scaleFactor = dpi / 96.0;
+
+                // Get work area (in physical pixels) to clamp window size
+                var displayArea = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(windowId, Microsoft.UI.Windowing.DisplayAreaFallback.Primary);
+                var workArea = displayArea.WorkArea;
+
+                int physicalWidth, physicalHeight;
+
+                if (options.Size.HasValue)
+                {
+                    // Preset sizes are percentages of the work area (already in physical pixels)
+                    double fraction = options.Size.Value switch
+                    {
+                        WinDialog.Models.WindowSize.Small => 0.25,
+                        WinDialog.Models.WindowSize.Medium => 0.45,
+                        WinDialog.Models.WindowSize.Large => 0.70,
+                        WinDialog.Models.WindowSize.Fullscreen => 1.0,
+                        _ => 0.45
+                    };
+                    physicalWidth = (int)(workArea.Width * fraction);
+                    physicalHeight = (int)(workArea.Height * fraction);
+                }
+                else
+                {
+                    // Convert logical pixels to physical pixels, then clamp to 90% of work area
+                    physicalWidth = (int)(options.Width * scaleFactor);
+                    physicalHeight = (int)(options.Height * scaleFactor);
+                    int maxWidth = (int)(workArea.Width * 0.9);
+                    int maxHeight = (int)(workArea.Height * 0.9);
+                    physicalWidth = Math.Min(physicalWidth, maxWidth);
+                    physicalHeight = Math.Min(physicalHeight, maxHeight);
+                }
+
+                // Enforce minimum usable size (200x150 physical pixels)
+                physicalWidth = Math.Max(physicalWidth, 200);
+                physicalHeight = Math.Max(physicalHeight, 150);
+
+                appWindow.Resize(new Windows.Graphics.SizeInt32(physicalWidth, physicalHeight));
 
                 if (options.HideTitleBar)
                 {
@@ -80,32 +126,39 @@ namespace WinDialog
                 }
 
                 // Handle positioning
-                var displayArea = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(windowId, Microsoft.UI.Windowing.DisplayAreaFallback.Primary);
-                var workArea = displayArea.WorkArea;
-                int x = 0, y = 0;
-
-                switch (options.Position)
+                int x, y;
+                if (options.Size == WinDialog.Models.WindowSize.Fullscreen)
                 {
-                    case WinDialog.Models.WindowPosition.Center:
-                        x = workArea.X + (workArea.Width - options.Width) / 2;
-                        y = workArea.Y + (workArea.Height - options.Height) / 2;
-                        break;
-                    case WinDialog.Models.WindowPosition.TopLeft:
-                        x = workArea.X;
-                        y = workArea.Y;
-                        break;
-                    case WinDialog.Models.WindowPosition.TopRight:
-                        x = workArea.X + workArea.Width - options.Width;
-                        y = workArea.Y;
-                        break;
-                    case WinDialog.Models.WindowPosition.BottomLeft:
-                        x = workArea.X;
-                        y = workArea.Y + workArea.Height - options.Height;
-                        break;
-                    case WinDialog.Models.WindowPosition.BottomRight:
-                        x = workArea.X + workArea.Width - options.Width;
-                        y = workArea.Y + workArea.Height - options.Height;
-                        break;
+                    // Fullscreen fills the entire work area
+                    x = workArea.X;
+                    y = workArea.Y;
+                }
+                else
+                {
+                    switch (options.Position)
+                    {
+                        case WinDialog.Models.WindowPosition.TopLeft:
+                            x = workArea.X;
+                            y = workArea.Y;
+                            break;
+                        case WinDialog.Models.WindowPosition.TopRight:
+                            x = workArea.X + workArea.Width - physicalWidth;
+                            y = workArea.Y;
+                            break;
+                        case WinDialog.Models.WindowPosition.BottomLeft:
+                            x = workArea.X;
+                            y = workArea.Y + workArea.Height - physicalHeight;
+                            break;
+                        case WinDialog.Models.WindowPosition.BottomRight:
+                            x = workArea.X + workArea.Width - physicalWidth;
+                            y = workArea.Y + workArea.Height - physicalHeight;
+                            break;
+                        case WinDialog.Models.WindowPosition.Center:
+                        default:
+                            x = workArea.X + (workArea.Width - physicalWidth) / 2;
+                            y = workArea.Y + (workArea.Height - physicalHeight) / 2;
+                            break;
+                    }
                 }
                 appWindow.Move(new Windows.Graphics.PointInt32(x, y));
             }

@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: [x64, ARM64]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Restore dependencies
+        run: dotnet restore -p:Platform=${{ matrix.platform }}
+
+      - name: Build MSIX package
+        shell: pwsh
+        run: |
+          dotnet build -c Release -p:Platform=${{ matrix.platform }} -p:AppxPackageSigningEnabled=false -p:GenerateAppxPackageOnBuild=true
+
+      - name: Find and rename MSIX
+        id: msix
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem -Path . -Filter "*.msix" -Recurse | Select-Object -First 1
+          if (-not $msix) {
+            Write-Error "No .msix file found"
+            exit 1
+          }
+          $newName = "WinDialog-${{ steps.version.outputs.VERSION }}-${{ matrix.platform }}.msix"
+          $dest = Join-Path $msix.DirectoryName $newName
+          Move-Item $msix.FullName $dest
+          echo "MSIX_PATH=$dest" >> $env:GITHUB_OUTPUT
+          echo "MSIX_NAME=$newName" >> $env:GITHUB_OUTPUT
+
+      - name: Upload MSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msix-${{ matrix.platform }}
+          path: ${{ steps.msix.outputs.MSIX_PATH }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: WinDialog ${{ github.ref_name }}
+          generate_release_notes: true
+          files: artifacts/*.msix

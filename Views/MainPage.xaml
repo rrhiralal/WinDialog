@@ -8,17 +8,17 @@
     xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
-    <Grid Padding="24">
+    <Grid x:Name="RootGrid" Padding="20" SizeChanged="OnRootGridSizeChanged">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*" MinHeight="40" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock x:Name="TitleText" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center" Text="Title" />
-            <Border BorderBrush="#E5E5E5" BorderThickness="0,1,0,0" Margin="-24,15,-24,0" />
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock x:Name="TitleText" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Text="Title" TextTrimming="CharacterEllipsis" />
+            <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,12,0,0" />
         </StackPanel>
 
         <!-- Content -->
@@ -28,19 +28,19 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Image x:Name="IconImage" Grid.Column="0" Width="96" Height="96" Margin="0,0,24,0" VerticalAlignment="Top" Visibility="Collapsed" />
+            <Image x:Name="IconImage" Grid.Column="0" Width="64" Height="64" Margin="0,0,16,0" VerticalAlignment="Top" Visibility="Collapsed" />
 
-            <ScrollViewer Grid.Column="1">
-                <controls:MarkdownTextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="15" Background="Transparent" />
+            <ScrollViewer Grid.Column="1" Padding="0,0,4,0">
+                <controls:MarkdownTextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="14" Background="Transparent" />
             </ScrollViewer>
         </Grid>
 
         <!-- Footer -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
-            <TextBlock x:Name="TimerText" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14" Foreground="Gray" Visibility="Collapsed" />
-            <Button x:Name="Button1" Content="OK" Click="OnButton1Clicked" Style="{StaticResource AccentButtonStyle}" />
-            <Button x:Name="Button2" Content="Cancel" Visibility="Collapsed" Click="OnButton2Clicked" />
-            <Button x:Name="HelpButton" Click="OnHelpButtonClicked" Visibility="Collapsed" Width="30" Height="30" CornerRadius="15" Padding="0" Margin="10,0,0,0" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+            <TextBlock x:Name="TimerText" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="Collapsed" />
+            <Button x:Name="Button1" Content="OK" Click="OnButton1Clicked" Style="{StaticResource AccentButtonStyle}" MinWidth="80" />
+            <Button x:Name="Button2" Content="Cancel" Visibility="Collapsed" Click="OnButton2Clicked" MinWidth="80" />
+            <Button x:Name="HelpButton" Click="OnHelpButtonClicked" Visibility="Collapsed" Width="36" Height="36" CornerRadius="18" Padding="0" Margin="8,0,0,0" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}">
                 <SymbolIcon Symbol="Help" />
             </Button>
         </StackPanel>

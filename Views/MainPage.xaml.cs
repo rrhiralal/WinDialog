@@ -18,6 +18,16 @@ namespace WinDialog.Views
         public MainPage()
         {
             this.InitializeComponent();
+            this.KeyDown += OnPageKeyDown;
+        }
+
+        private void OnPageKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+        {
+            if (e.Key == Windows.System.VirtualKey.Escape && Button2.Visibility == Visibility.Visible)
+            {
+                OnButton2Clicked(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -53,28 +63,8 @@ namespace WinDialog.Views
                 {
                     try
                     {
-                        if (options.Icon.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                        {
-                            IconImage.Source = new BitmapImage(new Uri(options.Icon));
-                            IconImage.Visibility = Visibility.Visible;
-                        }
-                        else if (System.IO.File.Exists(options.Icon))
-                        {
-                            IconImage.Source = new BitmapImage(new Uri(options.Icon));
-                            IconImage.Visibility = Visibility.Visible;
-                        }
-                        else
-                        {
-                            // Try Base64
-                            byte[] bytes = Convert.FromBase64String(options.Icon);
-                            var stream = new InMemoryRandomAccessStream();
-                            await stream.WriteAsync(bytes.AsBuffer());
-                            stream.Seek(0);
-                            var image = new BitmapImage();
-                            await image.SetSourceAsync(stream);
-                            IconImage.Source = image;
-                            IconImage.Visibility = Visibility.Visible;
-                        }
+                        await LoadIconAsync(options.Icon);
+                        ApplyIconSize(options.IconSizeOption);
                     }
                     catch (Exception ex)
                     {
@@ -139,6 +129,123 @@ namespace WinDialog.Views
         {
             Console.WriteLine(_options?.Button2 ?? "Cancel");
             Environment.Exit(2);
+        }
+
+        private async Task LoadIconAsync(string icon)
+        {
+            // Strip data URI prefix if present (e.g. "data:image/png;base64,...")
+            string base64Data = null;
+            if (icon.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                int commaIndex = icon.IndexOf(',');
+                if (commaIndex >= 0)
+                    base64Data = icon.Substring(commaIndex + 1);
+            }
+
+            if (base64Data != null)
+            {
+                // Decoded from data: URI
+                await SetIconFromBase64(base64Data);
+            }
+            else if (icon.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                     icon.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                IconImage.Source = new BitmapImage(new Uri(icon));
+                IconImage.Visibility = Visibility.Visible;
+            }
+            else if (System.IO.File.Exists(icon))
+            {
+                IconImage.Source = new BitmapImage(new Uri(icon));
+                IconImage.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                // Treat as raw base64 string
+                await SetIconFromBase64(icon);
+            }
+        }
+
+        private async Task SetIconFromBase64(string base64)
+        {
+            // Clean up whitespace/newlines that may be present in long base64 strings
+            base64 = base64.Trim();
+            byte[] bytes = Convert.FromBase64String(base64);
+            var stream = new InMemoryRandomAccessStream();
+            await stream.WriteAsync(bytes.AsBuffer());
+            stream.Seek(0);
+            var image = new BitmapImage();
+            await image.SetSourceAsync(stream);
+            IconImage.Source = image;
+            IconImage.Visibility = Visibility.Visible;
+        }
+
+        private void ApplyIconSize(IconSize sizeOption)
+        {
+            if (sizeOption.Preset.HasValue)
+            {
+                double px = sizeOption.Preset.Value switch
+                {
+                    IconSizePreset.Small => 32,
+                    IconSizePreset.Medium => 64,
+                    IconSizePreset.Large => 128,
+                    _ => 64
+                };
+                IconImage.Width = px;
+                IconImage.Height = px;
+                IconImage.Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform;
+            }
+            else if (sizeOption.WidthPixels.HasValue || sizeOption.HeightPixels.HasValue)
+            {
+                // When only one axis is specified, set the other to NaN (Auto)
+                // so the image scales proportionally via Stretch.Uniform
+                if (sizeOption.WidthPixels.HasValue && sizeOption.HeightPixels.HasValue)
+                {
+                    IconImage.Width = sizeOption.WidthPixels.Value;
+                    IconImage.Height = sizeOption.HeightPixels.Value;
+                    IconImage.Stretch = Microsoft.UI.Xaml.Media.Stretch.Fill;
+                }
+                else if (sizeOption.WidthPixels.HasValue)
+                {
+                    IconImage.Width = sizeOption.WidthPixels.Value;
+                    IconImage.Height = double.NaN;
+                    IconImage.Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform;
+                }
+                else
+                {
+                    IconImage.Width = double.NaN;
+                    IconImage.Height = sizeOption.HeightPixels.Value;
+                    IconImage.Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform;
+                }
+            }
+            // else: no --iconsize specified, responsive auto-scaling applies
+        }
+
+        private bool HasExplicitIconSize =>
+            _options?.IconSizeOption?.Preset != null ||
+            _options?.IconSizeOption?.WidthPixels != null ||
+            _options?.IconSizeOption?.HeightPixels != null;
+
+        private void OnRootGridSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            double w = e.NewSize.Width;
+            double h = e.NewSize.Height;
+
+            // Scale title font: 18-26 based on width
+            double titleSize = Math.Clamp(w * 0.04, 18, 26);
+            TitleText.FontSize = titleSize;
+
+            // Scale message font: 13-16 based on width
+            double messageSize = Math.Clamp(w * 0.026, 13, 16);
+            MessageText.FontSize = messageSize;
+
+            // Only auto-scale icon if no explicit --iconsize was set
+            if (!HasExplicitIconSize)
+            {
+                double dim = Math.Min(w, h);
+                double iconSize = Math.Clamp(dim * 0.15, 48, 96);
+                IconImage.Width = iconSize;
+                IconImage.Height = iconSize;
+            }
         }
 
         private async void OnHelpButtonClicked(object sender, RoutedEventArgs e)
