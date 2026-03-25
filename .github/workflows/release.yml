@@ -35,7 +35,10 @@ jobs:
       - name: Build MSIX package
         shell: pwsh
         run: |
-          dotnet build -c Release -p:Platform=${{ matrix.platform }} -p:AppxPackageSigningEnabled=false -p:GenerateAppxPackageOnBuild=true
+          dotnet build -c Release `
+            -p:Platform=${{ matrix.platform }} `
+            -p:GenerateAppxPackageOnBuild=true `
+            -p:AppxPackageSigningEnabled=false
 
       - name: Find and rename MSIX
         id: msix

@@ -17,3 +17,8 @@ artifacts/
 
 # MSC
 _NCache_
+
+# Secrets (private keys, credentials)
+secrets/
+
+.claude/

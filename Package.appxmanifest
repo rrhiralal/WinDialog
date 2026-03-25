@@ -11,14 +11,14 @@
 
   <Identity
     Name="WinDialog"
-    Publisher="CN=WinDialog"
+    Publisher="CN=WinDialog, O=RichardHiralal"
     Version="1.1.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="b7804aa9-cb9f-4c5c-a1e0-935ed49309fa" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>WinDialog</DisplayName>
-    <PublisherDisplayName>WinDialog</PublisherDisplayName>
+    <PublisherDisplayName>Richard Hiralal</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
