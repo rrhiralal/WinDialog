@@ -1,20 +1,23 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Installs WinDialog from GitHub with certificate trust.
+    Installs or updates WinDialog from GitHub with certificate trust.
 .DESCRIPTION
     Downloads the latest WinDialog MSIX from GitHub, imports the signing
     certificate into the local machine's Trusted People store, and installs
-    the package. Designed to be run via MDM (Intune, etc.) as SYSTEM.
+    or updates the package. Designed to be run via MDM (Intune, etc.) as SYSTEM.
 .PARAMETER Version
     The version to install (e.g., "1.1.0"). Defaults to latest.
 .PARAMETER Architecture
     Target architecture: x64 or ARM64. Defaults to current system architecture.
+.PARAMETER Force
+    Force reinstall even if the same version is already installed.
 #>
 param(
     [string]$Version = "latest",
     [ValidateSet("x64", "ARM64")]
-    [string]$Architecture
+    [string]$Architecture,
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,18 +39,37 @@ $certPath = Join-Path $env:TEMP "WinDialog.cer"
 [IO.File]::WriteAllBytes($certPath, $certBytes)
 
 try {
+    $newCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2(,$certBytes)
     $existing = Get-ChildItem Cert:\LocalMachine\TrustedPeople | Where-Object { $_.Subject -eq "CN=WinDialog, O=RichardHiralal" }
+
     if (-not $existing) {
         Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
-        Write-Host "Certificate imported successfully."
+        Write-Host "Certificate imported successfully (expires $($newCert.NotAfter.ToString('yyyy-MM-dd')))."
+    } elseif ($existing.Thumbprint -ne $newCert.Thumbprint) {
+        # Different cert (renewed) — remove old, import new
+        Write-Host "Updating certificate (old expires $($existing.NotAfter.ToString('yyyy-MM-dd')), new expires $($newCert.NotAfter.ToString('yyyy-MM-dd')))..."
+        $existing | Remove-Item
+        Import-Certificate -FilePath $certPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+        Write-Host "Certificate updated successfully."
+    } elseif ($existing.NotAfter -lt (Get-Date)) {
+        Write-Warning "Certificate has expired ($($existing.NotAfter.ToString('yyyy-MM-dd'))). Update the install script with a renewed certificate."
     } else {
-        Write-Host "Certificate already trusted."
+        Write-Host "Certificate already trusted (expires $($existing.NotAfter.ToString('yyyy-MM-dd')))."
     }
 } finally {
     Remove-Item $certPath -Force -ErrorAction SilentlyContinue
 }
 
-# --- Resolve version ---
+# --- Check installed version ---
+$installed = Get-AppxPackage -Name "WinDialog" -ErrorAction SilentlyContinue
+if ($installed) {
+    $installedVersion = [version]$installed.Version
+    Write-Host "WinDialog v$installedVersion is currently installed."
+} else {
+    Write-Host "WinDialog is not currently installed."
+}
+
+# --- Resolve target version ---
 if ($Version -eq "latest") {
     Write-Host "Fetching latest release..."
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repoOwner/$repoName/releases/latest"
@@ -56,6 +78,22 @@ if ($Version -eq "latest") {
 } else {
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repoOwner/$repoName/releases/tags/v$Version"
     $assets = $release.assets
+}
+
+# MSIX versions require 4 parts (x.x.x.0)
+$targetVersion = [version]"$Version.0"
+
+# --- Compare versions ---
+if ($installed -and -not $Force) {
+    if ($installedVersion -eq $targetVersion) {
+        Write-Host "WinDialog v$Version is already installed. Use -Force to reinstall."
+        exit 0
+    } elseif ($installedVersion -gt $targetVersion) {
+        Write-Host "Installed version ($installedVersion) is newer than target ($targetVersion). Use -Force to downgrade."
+        exit 0
+    } else {
+        Write-Host "Updating WinDialog from v$installedVersion to v$targetVersion..."
+    }
 }
 
 # --- Download MSIX ---
@@ -70,11 +108,15 @@ $msixPath = Join-Path $env:TEMP $assetName
 Write-Host "Downloading $assetName..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $msixPath
 
-# --- Install ---
+# --- Install or update ---
 try {
-    Write-Host "Installing WinDialog v$Version ($Architecture)..."
+    if ($installed) {
+        Write-Host "Updating WinDialog to v$Version ($Architecture)..."
+    } else {
+        Write-Host "Installing WinDialog v$Version ($Architecture)..."
+    }
     Add-AppxPackage -Path $msixPath
-    Write-Host "WinDialog installed successfully. Run 'WinDialog.exe' from any terminal."
+    Write-Host "WinDialog v$Version installed successfully. Run 'WinDialog.exe' from any terminal."
 } finally {
     Remove-Item $msixPath -Force -ErrorAction SilentlyContinue
 }
