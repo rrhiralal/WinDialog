@@ -60,12 +60,20 @@ try {
     Remove-Item $certPath -Force -ErrorAction SilentlyContinue
 }
 
-# --- Check installed version ---
-$installed = Get-AppxPackage -Name "WinDialog" -ErrorAction SilentlyContinue
-if ($installed) {
+# --- Check installed version (user or provisioned) ---
+$installed = Get-AppxPackage -AllUsers -Name "WinDialog" -ErrorAction SilentlyContinue
+if (-not $installed) {
+    $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq "WinDialog" }
+    if ($provisioned) {
+        $installedVersion = [version]$provisioned.Version
+        Write-Host "WinDialog v$installedVersion is provisioned (system-wide)."
+    }
+} else {
     $installedVersion = [version]$installed.Version
     Write-Host "WinDialog v$installedVersion is currently installed."
-} else {
+}
+
+if (-not $installed -and -not $provisioned) {
     Write-Host "WinDialog is not currently installed."
 }
 
@@ -84,7 +92,8 @@ if ($Version -eq "latest") {
 $targetVersion = [version]"$Version.0"
 
 # --- Compare versions ---
-if ($installed -and -not $Force) {
+$isInstalled = $installed -or $provisioned
+if ($isInstalled -and -not $Force) {
     if ($installedVersion -eq $targetVersion) {
         Write-Host "WinDialog v$Version is already installed. Use -Force to reinstall."
         exit 0
@@ -108,15 +117,15 @@ $msixPath = Join-Path $env:TEMP $assetName
 Write-Host "Downloading $assetName..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $msixPath
 
-# --- Install or update ---
+# --- Install or update (system-wide) ---
 try {
-    if ($installed) {
-        Write-Host "Updating WinDialog to v$Version ($Architecture)..."
+    if ($isInstalled) {
+        Write-Host "Updating WinDialog to v$Version ($Architecture) system-wide..."
     } else {
-        Write-Host "Installing WinDialog v$Version ($Architecture)..."
+        Write-Host "Installing WinDialog v$Version ($Architecture) system-wide..."
     }
-    Add-AppxPackage -Path $msixPath
-    Write-Host "WinDialog v$Version installed successfully. Run 'WinDialog.exe' from any terminal."
+    Add-AppxProvisionedPackage -Online -PackagePath $msixPath -SkipLicense | Out-Null
+    Write-Host "WinDialog v$Version installed successfully for all users. Run 'WinDialog.exe' from any terminal."
 } finally {
     Remove-Item $msixPath -Force -ErrorAction SilentlyContinue
 }
