@@ -31,7 +31,7 @@
             <Image x:Name="IconImage" Grid.Column="0" Width="64" Height="64" Margin="0,0,16,0" VerticalAlignment="Top" Visibility="Collapsed" />
 
             <ScrollViewer Grid.Column="1" Padding="0,0,4,0">
-                <controls:MarkdownTextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="14" Background="Transparent" />
+                <controls:MarkdownTextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="14" Background="Transparent" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
             </ScrollViewer>
         </Grid>
 
