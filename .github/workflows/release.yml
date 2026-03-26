@@ -29,16 +29,26 @@ jobs:
           $version = "${{ github.ref_name }}" -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Import signing certificate
+        shell: pwsh
+        run: |
+          $pfxBytes = [Convert]::FromBase64String("${{ secrets.SIGNING_CERTIFICATE_BASE64 }}")
+          $pfxPath = Join-Path $env:RUNNER_TEMP "WinDialog.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+          echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
+
       - name: Restore dependencies
         run: dotnet restore -p:Platform=${{ matrix.platform }}
 
-      - name: Build MSIX package
+      - name: Build and sign MSIX package
         shell: pwsh
         run: |
           dotnet build -c Release `
             -p:Platform=${{ matrix.platform }} `
             -p:GenerateAppxPackageOnBuild=true `
-            -p:AppxPackageSigningEnabled=false
+            -p:AppxPackageSigningEnabled=true `
+            -p:PackageCertificateKeyFile="$env:PFX_PATH" `
+            -p:PackageCertificatePassword="${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}"
 
       - name: Find and rename MSIX
         id: msix
@@ -54,6 +64,12 @@ jobs:
           Move-Item $msix.FullName $dest
           echo "MSIX_PATH=$dest" >> $env:GITHUB_OUTPUT
           echo "MSIX_NAME=$newName" >> $env:GITHUB_OUTPUT
+
+      - name: Clean up certificate
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path $env:PFX_PATH) { Remove-Item $env:PFX_PATH -Force }
 
       - name: Upload MSIX artifact
         uses: actions/upload-artifact@v4
