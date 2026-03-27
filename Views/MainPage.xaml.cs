@@ -69,7 +69,7 @@ namespace WinDialog.Views
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Warning: Failed to load icon: {ex.Message}");
+                        Console.WriteLine($"Warning: Failed to load icon: [{ex.GetType().Name}] {ex.Message}");
                     }
                 }
 
@@ -288,12 +288,28 @@ namespace WinDialog.Views
         {
             base64 = base64.Trim();
             byte[] bytes = Convert.FromBase64String(base64);
+
+            // Detect SVG: starts with "<?xm" or "<svg"
+            bool isSvg = bytes.Length > 4 &&
+                ((bytes[0] == 0x3C && bytes[1] == 0x3F && bytes[2] == 0x78 && bytes[3] == 0x6D) ||
+                 (bytes[0] == 0x3C && bytes[1] == 0x73 && bytes[2] == 0x76 && bytes[3] == 0x67));
+
             var stream = new InMemoryRandomAccessStream();
             await stream.WriteAsync(bytes.AsBuffer());
             stream.Seek(0);
-            var image = new BitmapImage();
-            await image.SetSourceAsync(stream);
-            IconImage.Source = image;
+
+            if (isSvg)
+            {
+                var svgSource = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource();
+                await svgSource.SetSourceAsync(stream);
+                IconImage.Source = svgSource;
+            }
+            else
+            {
+                var image = new BitmapImage();
+                await image.SetSourceAsync(stream);
+                IconImage.Source = image;
+            }
             IconImage.Visibility = Visibility.Visible;
         }
 
