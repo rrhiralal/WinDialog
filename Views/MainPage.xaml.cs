@@ -19,10 +19,51 @@ namespace WinDialog.Views
             .UseAdvancedExtensions()
             .Build();
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        private CancellationTokenSource? _quitKeyCts;
+
         public MainPage()
         {
             this.InitializeComponent();
             this.KeyDown += OnPageKeyDown;
+        }
+
+        private void StartQuitKeyListener()
+        {
+            _quitKeyCts = new CancellationTokenSource();
+            var qk = _options!.QuitKey!;
+            var expectedKey = (int)ParseVirtualKey(qk.Key);
+            var token = _quitKeyCts.Token;
+
+            // Get our window handle for focus check
+            var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(
+                ((App)Application.Current).MainWindow);
+
+            Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    // Only respond when our window is focused
+                    if (GetForegroundWindow() == hWnd)
+                    {
+                        bool ctrlDown = (GetAsyncKeyState(0x11) & 0x8000) != 0;
+                        bool altDown = (GetAsyncKeyState(0x12) & 0x8000) != 0;
+                        bool shiftDown = (GetAsyncKeyState(0x10) & 0x8000) != 0;
+                        bool keyDown = (GetAsyncKeyState(expectedKey) & 0x8000) != 0;
+
+                        if (ctrlDown == qk.Control && altDown == qk.Alt && shiftDown == qk.Shift && keyDown)
+                        {
+                            Console.WriteLine("quitkey pressed");
+                            Environment.Exit(5);
+                        }
+                    }
+                    await Task.Delay(50, token).ConfigureAwait(false);
+                }
+            }, token);
         }
 
         private void OnPageKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
@@ -34,22 +75,46 @@ namespace WinDialog.Views
             }
         }
 
+        private static Windows.System.VirtualKey ParseVirtualKey(string key)
+        {
+            if (key.Length == 1)
+            {
+                char c = char.ToUpper(key[0]);
+                if (c >= 'A' && c <= 'Z')
+                    return (Windows.System.VirtualKey)c;
+                if (c >= '0' && c <= '9')
+                    return (Windows.System.VirtualKey)c;
+            }
+            if (Enum.TryParse<Windows.System.VirtualKey>(key, true, out var vk))
+                return vk;
+            return Windows.System.VirtualKey.None;
+        }
+
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
             if (e.Parameter is DialogOptions options)
             {
                 _options = options;
+
                 if (!string.IsNullOrEmpty(options.Title))
                     TitleText.Text = options.Title;
 
                 if (!string.IsNullOrEmpty(options.Message))
                     await LoadMarkdownMessage(options.Message);
 
-                if (!string.IsNullOrEmpty(options.Button1))
-                    Button1.Content = options.Button1;
+                if (!options.Button1.Equals("none", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.IsNullOrEmpty(options.Button1))
+                        Button1.Content = options.Button1;
+                    Button1.Visibility = Visibility.Visible;
+                }
 
-                if (!string.IsNullOrEmpty(options.Button2))
+                if (options.HasNoButtons)
+                {
+                    Button2.Visibility = Visibility.Collapsed;
+                }
+                else if (!string.IsNullOrEmpty(options.Button2))
                 {
                     Button2.Content = options.Button2;
                     Button2.Visibility = Visibility.Visible;
@@ -96,6 +161,10 @@ namespace WinDialog.Views
                     };
                     timer.Start();
                 }
+
+                // Start quit key listener after all async setup is complete
+                if (options.QuitKey != null)
+                    StartQuitKeyListener();
             }
         }
 
@@ -176,6 +245,8 @@ namespace WinDialog.Views
             MessageWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             MessageWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
             MessageWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            MessageWebView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+
 
             // Open links in the system browser
             MessageWebView.CoreWebView2.NewWindowRequested += (sender, args) =>
@@ -210,6 +281,7 @@ namespace WinDialog.Views
 
         private void CleanupAndExit(int exitCode)
         {
+            _quitKeyCts?.Cancel();
             MessageWebView.Close();
             Environment.Exit(exitCode);
         }

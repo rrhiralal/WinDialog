@@ -8,6 +8,7 @@ namespace WinDialog
     public partial class App : Application
     {
         private Window window = Window.Current;
+        public Window MainWindow => window;
 
         [System.Runtime.InteropServices.DllImport("kernel32.dll")]
         static extern bool AttachConsole(int dwProcessId);
@@ -50,8 +51,9 @@ namespace WinDialog
                 Console.WriteLine("Options:");
                 Console.WriteLine("  --title <text>    Set the window title");
                 Console.WriteLine("  --message <text>  Set the message text");
-                Console.WriteLine("  --button1 <text>  Set the primary button text (default: OK)");
+                Console.WriteLine("  --button1 <text>  Set the primary button text (default: OK). Use \"none\" to hide all buttons");
                 Console.WriteLine("  --button2 <text>  Set the secondary button text (optional)");
+                Console.WriteLine("  --quitkey <combo> Set a quit key combination (e.g., \"control,P\"). Required when --button1 is \"none\"");
                 Console.WriteLine("  --width <int>     Set the window width in logical pixels (default: 600)");
                 Console.WriteLine("  --height <int>    Set the window height in logical pixels (default: 400)");
                 Console.WriteLine("  --size <preset>   Set window size relative to display (small, medium, large, fullscreen)");

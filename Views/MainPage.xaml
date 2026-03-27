@@ -35,7 +35,7 @@
         <!-- Footer -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
             <TextBlock x:Name="TimerText" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="Collapsed" />
-            <Button x:Name="Button1" Content="OK" Click="OnButton1Clicked" Style="{StaticResource AccentButtonStyle}" MinWidth="80" />
+            <Button x:Name="Button1" Content="OK" Click="OnButton1Clicked" Style="{StaticResource AccentButtonStyle}" MinWidth="80" Visibility="Collapsed" />
             <Button x:Name="Button2" Content="Cancel" Visibility="Collapsed" Click="OnButton2Clicked" MinWidth="80" />
             <Button x:Name="HelpButton" Click="OnHelpButtonClicked" Visibility="Collapsed" Width="36" Height="36" CornerRadius="18" Padding="0" Margin="8,0,0,0" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}">
                 <SymbolIcon Symbol="Help" />
