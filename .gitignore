@@ -21,4 +21,10 @@ _NCache_
 # Secrets (private keys, credentials)
 secrets/
 
+# Local MSIX build output
+AppPackages/
+
+# macOS
+.DS_Store
+
 .claude/
