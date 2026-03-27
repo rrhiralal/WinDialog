@@ -243,18 +243,45 @@ namespace WinDialog.Views
             else if (icon.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                      icon.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                IconImage.Source = new BitmapImage(new Uri(icon));
+                if (icon.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+                    IconImage.Source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(new Uri(icon));
+                else
+                    IconImage.Source = new BitmapImage(new Uri(icon));
                 IconImage.Visibility = Visibility.Visible;
             }
             else if (System.IO.File.Exists(icon))
             {
-                IconImage.Source = new BitmapImage(new Uri(icon));
+                var ext = System.IO.Path.GetExtension(icon).ToLower();
+                if (ext == ".svg")
+                {
+                    IconImage.Source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(new Uri(System.IO.Path.GetFullPath(icon)));
+                }
+                else
+                {
+                    IconImage.Source = new BitmapImage(new Uri(System.IO.Path.GetFullPath(icon)));
+                }
                 IconImage.Visibility = Visibility.Visible;
             }
-            else
+            else if (IsLikelyBase64(icon))
             {
                 await SetIconFromBase64(icon);
             }
+            else
+            {
+                Console.WriteLine($"Warning: Icon not found or not recognized: {icon}");
+            }
+        }
+
+        private static bool IsLikelyBase64(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length < 16)
+                return false;
+            foreach (char c in value.Trim())
+            {
+                if (!char.IsLetterOrDigit(c) && c != '+' && c != '/' && c != '=' && c != '\r' && c != '\n')
+                    return false;
+            }
+            return true;
         }
 
         private async Task SetIconFromBase64(string base64)
