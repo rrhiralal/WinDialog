@@ -17,6 +17,7 @@ artifacts/
 
 # MSC
 _NCache_
+.DS_Store
 
 # Secrets (private keys, credentials)
 secrets/
