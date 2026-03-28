@@ -4,12 +4,15 @@
 
 ## Features
 
-- **Native WinUI 3 Design**: Modern, clean aesthetics that match Windows 11/10.
+- **Native WinUI 3 Design**: Modern, clean aesthetics that match Windows 11/10. Supports light and dark mode.
 - **DPI-Aware**: Automatic scaling for any display resolution and scaling factor (100%-300%).
-- **Rich Text Support**: Full Markdown support for messages, including **bold**, *italics*, lists, headers, and hyperlinks.
+- **Rich Text Support**: Full Markdown support for messages, including **bold**, *italics*, lists, headers, code blocks, tables, and hyperlinks.
 - **Customizable Layout**: Control window size (presets or pixel dimensions), position, icon size, and title bar visibility.
-- **Interactive Elements**: Custom buttons, help messages with popovers, and icons (URL, file, Base64, or data URI).
-- **Automation Friendly**: Returns exit codes based on user interaction (0 for OK, 2 for Cancel). Escape key triggers Cancel.
+- **Icon Support**: PNG, JPG, ICO, and SVG icons from local files, URLs, Base64 strings, or data URIs.
+- **Buttonless Dialogs**: Hide all buttons with `--button1 "none"` for display-only or kiosk scenarios.
+- **Quit Key**: Define a custom key combination to dismiss the dialog (required when no buttons are visible).
+- **Interactive Elements**: Custom buttons, help messages with popovers, and Escape key support for Cancel.
+- **Automation Friendly**: Returns distinct exit codes based on user interaction for scripting.
 - **Timer**: Auto-dismiss functionality with customizable countdown text.
 
 ## Installation
@@ -24,6 +27,21 @@ Download the latest `.msix` package for your architecture from the [Releases](ht
 Double-click the `.msix` to install, or deploy via Intune/SCCM/GPO for enterprise rollout.
 
 After installation, `WinDialog.exe` is available from any terminal (PowerShell, cmd) via app execution alias.
+
+### MDM Deployment
+
+Use the included install/uninstall scripts for enterprise deployment:
+
+```powershell
+# Install (auto-detects architecture, fetches latest release)
+.\scripts\Install-WinDialog.ps1
+
+# Install specific version
+.\scripts\Install-WinDialog.ps1 -Version 1.1.0
+
+# Uninstall
+.\scripts\Uninstall-WinDialog.ps1
+```
 
 ### Build from Source
 
@@ -49,14 +67,15 @@ WinDialog.exe [options]
 |------|-------------|---------|
 | `--title <text>` | Set the window title. | "WinDialog" |
 | `--message <text>` | Set the message text. Supports Markdown. Use `\n` for newlines. | "" |
-| `--button1 <text>` | Set the primary button text. (Also accepts `--button1text`.) | "OK" |
+| `--button1 <text>` | Set the primary button text. Use `"none"` to hide all buttons. (Also accepts `--button1text`.) | "OK" |
 | `--button2 <text>` | Set the secondary button text. If omitted, the button is hidden. (Also accepts `--button2text`.) | Hidden |
+| `--quitkey <combo>` | Set a key combination to dismiss the dialog (exit code 5). Format: `"modifier,modifier,key"`. Required when `--button1` is `"none"`. | None |
 | `--width <int>` | Set the window width in logical pixels (DPI-scaled automatically). | 600 |
 | `--height <int>` | Set the window height in logical pixels (DPI-scaled automatically). | 400 |
 | `--size <preset>` | Set window size relative to display: `small` (25%), `medium` (45%), `large` (70%), `fullscreen`. Overrides `--width`/`--height`. | None |
 | `--hide-titlebar` | Hide the standard window title bar. | False |
 | `--position <pos>` | Set window position: `Center`, `TopLeft`, `TopRight`, `BottomLeft`, `BottomRight`. | `Center` |
-| `--icon <path>` | Set the icon. Supports local file paths, HTTP(S) URLs, Base64 strings, or data URIs (`data:image/png;base64,...`). | None |
+| `--icon <path>` | Set the icon. Supports local file paths, HTTP(S) URLs, Base64 strings, or data URIs. PNG, JPG, ICO, and SVG formats supported. | None |
 | `--iconsize <size>` | Set icon size. Presets: `small` (32px), `medium` (64px), `large` (128px). Pixels: `WxH`, `W` (width, proportional height), or `xH` (height, proportional width). | Auto-scaled |
 | `--timer <seconds>` | Set a countdown timer to auto-click the default button. | None |
 | `--timer-text <txt>` | Customize the text displayed before the timer countdown. | "Closing in" |
@@ -64,10 +83,28 @@ WinDialog.exe [options]
 | `--version` | Show version information. | |
 | `--help` | Show this help message. | |
 
+### Quit Key Format
+
+The `--quitkey` flag accepts a comma-separated combination of modifiers and a key:
+
+```
+--quitkey "control,shift,Q"
+--quitkey "alt,F9"
+--quitkey "control,alt,X"
+```
+
+Supported modifiers: `control` (or `ctrl`), `alt`, `shift`.
+
+Some key combinations are restricted and cannot be used (e.g., `control,C`, `control,V`, `control,P`, `alt,F4`, `alt,Tab`, etc.).
+
 ### Return Codes
 
-- **0**: User clicked Button 1 (OK) or the timer expired.
-- **2**: User clicked Button 2 (Cancel) or pressed Escape.
+| Code | Meaning |
+|------|---------|
+| **0** | User clicked Button 1 (OK) or the timer expired. |
+| **2** | User clicked Button 2 (Cancel) or pressed Escape. |
+| **5** | User pressed the quit key combination. |
+| **20** | Command-line error (invalid arguments). |
 
 ## Examples
 
@@ -98,10 +135,28 @@ WinDialog.exe --title "Update Available" --message "# Version 2.0\n\n**New Featu
 WinDialog.exe --title "Restart Required" --message "Your computer will restart in 60 seconds." --button1 "Restart Now" --button2 "Postpone" --timer 60 --timer-text "Restarting in"
 ```
 
+### Buttonless Dialog with Quit Key
+```powershell
+# Display-only dialog, dismissed with Ctrl+Shift+Q
+WinDialog.exe --title "Installing" --message "Please wait while we configure your system..." --button1 "none" --quitkey "control,shift,Q"
+
+# Fullscreen kiosk-style dialog
+WinDialog.exe --title "Welcome" --message "# Setting up your device\nPlease do not turn off your computer." --size fullscreen --button1 "none" --quitkey "control,alt,X" --hide-titlebar
+```
+
+### Quit Key with Buttons
+```powershell
+# Additional dismiss option alongside buttons
+WinDialog.exe --title "Setup" --message "Installing software..." --quitkey "control,shift,Q"
+```
+
 ### Icon with Custom Sizing
 ```powershell
 # Large icon from file
 WinDialog.exe --title "Success" --message "Task completed." --icon "C:\Images\check.png" --iconsize large
+
+# SVG icon
+WinDialog.exe --title "Info" --message "System update available." --icon "C:\Images\info.svg" --iconsize 120
 
 # Icon scaled to specific width (height proportional)
 WinDialog.exe --title "Warning" --message "Disk space low." --icon "C:\Images\warn.png" --iconsize 120
@@ -115,4 +170,15 @@ WinDialog.exe --title "Setup" --message "Please wait while we configure your sys
 ### Custom Position
 ```powershell
 WinDialog.exe --title "Notification" --message "Task completed." --icon "C:\Images\success.png" --position BottomRight --size small
+```
+
+### Scripting with Exit Codes
+```powershell
+WinDialog.exe --title "Confirm" --message "Proceed with installation?" --button1 "Yes" --button2 "No" --quitkey "control,shift,Q"
+
+switch ($LASTEXITCODE) {
+    0 { Write-Host "User clicked Yes" }
+    2 { Write-Host "User clicked No or pressed Escape" }
+    5 { Write-Host "User pressed quit key" }
+}
 ```
